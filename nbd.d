@@ -30,38 +30,35 @@ class NBTFile : TAG_Compound {
         AUTO
     }
 
-    protected Stream raw_stream;
-    protected Endian endian;
-    protected EndianStream endianstream;
+    this()() {}
 
     this()(string file, Compression compression = Compression.AUTO, bool big_endian = true) {
-        if(file.exists()) {
-            this(new BufferedFile(file, FileMode.In), compression, big_endian);
-        } else {
-            this(new BufferedFile(file, FileMode.OutNew), compression, big_endian);
-        }
+        this(new BufferedFile(file, FileMode.In), compression, big_endian);
     }
 
     this()(Stream stream, Compression compression = Compression.AUTO, bool big_endian = true) {
-        raw_stream = stream;
+        Endian endian = big_endian ? Endian.bigEndian : Endian.littleEndian;
+        stream = new EndianStream(stream, Endian.bigEndian);
 
-        endian = big_endian ? Endian.bigEndian : Endian.littleEndian;
-        endianstream = new EndianStream(raw_stream, Endian.bigEndian);
+        read(stream);
     }
 
-    void read() {
-        enforceEx!NBTException(raw_stream.readable, "Can't read from stream");
+    private void read(Stream stream) {
+        enforceEx!NBTException(stream.readable, "Can't read from stream");
 
-        enforceEx!NBTException(.read!(byte)(endianstream) == 0x0A, "file doesn't start with TAG_Compound");
+        enforceEx!NBTException(.read!(byte)(stream) == 0x0A, "file doesn't start with TAG_Compound");
 
-        TAG_Compound tc = super.read(endianstream);
+        TAG_Compound tc = super.read(stream);
 
         _value.compound = tc.value;
         name = tc.name;
     }
 
-    void write() {
-        enforceEx!NBTException(raw_stream.writeable, "Can't write into stream");
+    void save(Stream stream, Compression compression = Compression.DEFLATE, bool big_endian = true) {
+        enforceEx!NBTException(stream.writeable, "Can't write into stream");
+
+        Endian endian = big_endian ? Endian.bigEndian : Endian.littleEndian;
+        stream = new EndianStream(stream, Endian.bigEndian);
     }    
 }
 
