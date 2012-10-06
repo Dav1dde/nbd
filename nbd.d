@@ -7,8 +7,9 @@ private {
     import std.exception : enforceEx;
     import std.typetuple : TypeTuple;
     import std.typecons : NoDuplicates;
-    import std.traits : ReturnType;
+    import std.traits : isArray, isStaticArray;
     import std.string : format;
+    import std.metastrings : toStringNow;
 
     import std.stdio;
 }
@@ -53,7 +54,7 @@ class NBTFile : TAG_Compound {
 
         enforceEx!NBTException(.read!(byte)(endianstream) == 0x0A, "file doesn't start with TAG_Compound");
 
-        auto tc = super.read(endianstream);
+        TAG_Compound tc = super.read(endianstream);
 
         _value.compound = tc.value;
         name = tc.name;
@@ -65,8 +66,17 @@ class NBTFile : TAG_Compound {
 }
 
 union Value {
-    TAG[string] compound;
+    byte byte_;
+    short short_;
+    int int_;
+    long long_;
+    float float_;
+    double double_;
+    byte[] byte_array;
     string string_;
+    TAG[] list;
+    TAG[string] compound;
+    int[] int_array;
 }
 
 mixin template _TAG_Ctor() {
@@ -101,17 +111,55 @@ abstract class TAG {
 
     auto get(int id)() {
         static if(id == 1) {
-            return _value.compound;
+            return _value.byte_;
+        } else static if(id == 2) {
+            return _value.short_;
+        } else static if(id == 3) {
+            return _value.int_;
+        } else static if(id == 4) {
+            return _value.long_;
+        } else static if(id == 5) {
+            return _value.float_;
+        } else static if(id == 6) {
+            return _value.double_;
+        } else static if(id == 7) {
+            return _value.byte_array;
         } else static if(id == 8) {
             return _value.string_;
+        } else static if(id == 9) {
+            return _value.list;
+        } else static if(id == 10) {
+            return _value.compound;
+        } else static if(id == 11) {
+            return _value.int_array;
+        } else {
+            static assert(false, "get not implemented for id " ~ toStringNow!(i));
         }
     }
 
     void set(T)(T value) {
-        static if(is(T == TAG[string])) {
-            _value.compound = value;
+        static if(is(T == byte)) {
+            _value.byte_ = value;
+        } else static if(is(T == short)) {
+            _value.short_ = value;
+        } else static if(is(T == int)) {
+            _value.int_ = value;
+        } else static if(is(T == long)) {
+            _value.long_ = value;
+        } else static if(is(T == float)) {
+            _value.float_ = value;
+        } else static if(is(T == double)) {
+            _value.double_ = value;
+        } else static if(is(T == byte[])) {
+            _value.byte_array = value;
         } else static if(is(T == string)) {
             _value.string_ = value;
+        } else static if(is(T == TAG[])) {
+            _value.list = value;
+        } else static if(is(T == TAG[string])) {
+            _value.compound = value;
+        } else static if(is(T == int[])) {
+            _value.int_array = value;
         } else {
             static assert(false, "set not implemented for " ~ T.stringof);
         }
@@ -140,15 +188,125 @@ private template get_tags_impl(T...) {
 alias get_tags!() _tags;
 debug pragma(msg, _tags);
 
-class TAG_Compound : TAG {
+
+class TAG_Byte : TAG {
     enum id = 1;
 
     mixin _TAG_Ctor!();
 
-    static TAG_Compound read(Stream stream) {
+    static TAG_Byte read(Stream stream, bool no_name = false) {
+        return new TAG_Byte(no_name ? "" : .read!string(stream), .read!byte(stream));
+    }
+}
+
+class TAG_Short : TAG {
+    enum id = 2;
+
+    mixin _TAG_Ctor!();
+
+    static TAG_Short read(Stream stream, bool no_name = false) {
+        return new TAG_Short(no_name ? "" : .read!string(stream), .read!byte(stream));
+    }
+}
+
+class TAG_Int : TAG {
+    enum id = 3;
+
+    mixin _TAG_Ctor!();
+
+    static TAG_Int read(Stream stream, bool no_name = false) {
+        return new TAG_Int(no_name ? "" : .read!string(stream), .read!byte(stream));
+    }
+}
+
+class TAG_Long : TAG {
+    enum id = 4;
+
+    mixin _TAG_Ctor!();
+
+    static TAG_Long read(Stream stream, bool no_name = false) {
+        return new TAG_Long(no_name ? "" : .read!string(stream), .read!byte(stream));
+    }
+}
+
+class TAG_Float : TAG {
+    enum id = 5;
+
+    mixin _TAG_Ctor!();
+
+    static TAG_Float read(Stream stream, bool no_name = false) {
+        return new TAG_Float(no_name ? "" : .read!string(stream), .read!byte(stream));
+    }
+}
+
+class TAG_Double : TAG {
+    enum id = 6;
+
+    mixin _TAG_Ctor!();
+
+    static TAG_Double read(Stream stream, bool no_name = false) {
+        return new TAG_Double(no_name ? "" : .read!string(stream), .read!byte(stream));
+    }
+}
+
+class TAG_Byte_Array : TAG {
+    enum id = 7;
+
+    mixin _TAG_Ctor!();
+
+    static TAG_Byte_Array read(Stream stream, bool no_name = false) {
+        return new TAG_Byte_Array(no_name ? "" : .read!string(stream), .read!(byte[])(stream));
+    }
+}
+
+class TAG_String : TAG {
+    enum id = 8;
+
+    mixin _TAG_Ctor!();
+
+    static TAG_String read(Stream stream, bool no_name = false) {
+        return new TAG_String(no_name ? "" : .read!string(stream), .read!string(stream));
+    }
+}
+
+class TAG_List : TAG {
+    enum id = 9;
+
+    mixin _TAG_Ctor!();
+
+    static TAG_List read(Stream stream, bool no_name = false) {
+        string name = no_name ? "" : .read!string(stream);
+
+        byte tag = .read!byte(stream);
+        TAG[] result;
+        result.length = .read!int(stream);
+
+        sw:
+        switch(tag) {
+            foreach(e; _tags) {
+                case e.i: {
+                    foreach(i; 0..result.length) {
+                        result[i] = e.Type.read(stream, false);
+                    }
+                    
+                    break sw;
+                }
+            }
+
+            default: throw new NBTException(`invalid/unimplemented tag value %d"`.format(tag));
+        }
+    }
+}
+
+class TAG_Compound : TAG {
+    enum id = 10;
+
+    mixin _TAG_Ctor!();
+
+    static TAG_Compound read(Stream stream, bool no_name = false) {
         TAG[string] result;
 
-        string name = .read!string(stream);
+        string name = no_name ? "" : .read!string(stream);
 
         parse:
         while(true) {
@@ -159,7 +317,7 @@ class TAG_Compound : TAG {
                 case 0: break parse; break;
 
                 foreach(e; _tags) {
-                    case e.i: e.Type tmp = e.Type.read(stream);
+                    case e.i: e.Type tmp = e.Type.read(stream, false);
                               result[tmp.name] = tmp;
                               break sw;
                 }
@@ -173,13 +331,13 @@ class TAG_Compound : TAG {
     }
 }
 
-class TAG_String : TAG {
-    enum id = 8;
+class TAG_Int_Array : TAG {
+    enum id = 11;
 
     mixin _TAG_Ctor!();
 
-    static TAG_String read(Stream stream) {
-        return new TAG_String(.read!string(stream), .read!string(stream));
+    static TAG_Int_Array read(Stream stream, bool no_name = false) {
+        return new TAG_Int_Array(no_name ? "" : .read!string(stream), .read!(int[])(stream));
     }
 }
 
@@ -193,13 +351,28 @@ T read(T)(Stream stream) {
     }
 }
 
-private T read_impl(T : string)(Stream stream) {
+private T read_impl(T)(Stream stream) if(is(T == string)) {
     ushort length = read!(ushort)(stream);
     return stream.readString(length).idup;
 }
 
-private T read_impl(T)(Stream stream) {
-    T res;
-    stream.read(res);
-    return res;
+private T read_impl(T)(Stream stream) if(!is(T == string)) {
+    static if(isArray!T) {
+        static if(isStaticArray!T) {
+            T ret;
+        } else {
+            T ret;
+            ret.length = .read!int(stream);
+        }
+        
+        foreach(i; 0..ret.length) {
+            stream.read(ret[i]);
+        }
+
+        return ret;
+    } else {
+        T res;  
+        stream.read(res);
+        return res;
+    }
 }
