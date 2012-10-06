@@ -1,7 +1,7 @@
 module nbd;
 
 private {
-    import std.stream : Stream, BufferedFile, EndianStream, FileMode;
+    import std.stream : Stream, BufferedFile, EndianStream, MemoryStream, FileMode;
     import std.system : Endian;
     import std.file : exists;
     import std.exception : enforceEx;
@@ -10,8 +10,9 @@ private {
     import std.traits : isArray, isStaticArray;
     import std.string : format;
     import std.metastrings : toStringNow;
+    import std.zlib : compress, uncompress, ZlibException;
 
-    import std.stdio;
+//     import zstream;
 }
 
 
@@ -37,6 +38,30 @@ class NBTFile : TAG_Compound {
     }
 
     this()(Stream stream, Compression compression = Compression.AUTO, bool big_endian = true) {
+//         stream = new ZStream(stream, HeaderFormat.gzip);
+
+        // TODO: check magic number?
+        if(compression != Compression.NONE) {
+            // THIS SUCKS, but hey, fix std.stream and (more important) std.zlib!
+            ubyte[] buf;
+
+            ubyte[] tmp_buf = new ubyte[2048];
+            while(!stream.eof()) {
+                size_t r = stream.read(tmp_buf);
+                buf ~= tmp_buf;
+            }
+
+            ubyte[] uncompressed;
+            try {
+                // +32 to winbits enables zlibs auto detection 
+                uncompressed = cast(ubyte[])uncompress(cast(void[])buf, buf.length, 15+32);
+            } catch(ZlibException) { // assume it's not compressed
+                uncompressed = buf;
+            }
+
+            stream = new MemoryStream(cast(ubyte[])uncompressed);
+        }
+
         Endian endian = big_endian ? Endian.bigEndian : Endian.littleEndian;
         stream = new EndianStream(stream, Endian.bigEndian);
 
@@ -202,7 +227,7 @@ class TAG_Short : TAG {
     mixin _TAG_Ctor!();
 
     static TAG_Short read(Stream stream, bool no_name = false) {
-        return new TAG_Short(no_name ? "" : .read!string(stream), .read!byte(stream));
+        return new TAG_Short(no_name ? "" : .read!string(stream), .read!short(stream));
     }
 }
 
@@ -212,7 +237,7 @@ class TAG_Int : TAG {
     mixin _TAG_Ctor!();
 
     static TAG_Int read(Stream stream, bool no_name = false) {
-        return new TAG_Int(no_name ? "" : .read!string(stream), .read!byte(stream));
+        return new TAG_Int(no_name ? "" : .read!string(stream), .read!int(stream));
     }
 }
 
@@ -222,7 +247,7 @@ class TAG_Long : TAG {
     mixin _TAG_Ctor!();
 
     static TAG_Long read(Stream stream, bool no_name = false) {
-        return new TAG_Long(no_name ? "" : .read!string(stream), .read!byte(stream));
+        return new TAG_Long(no_name ? "" : .read!string(stream), .read!long(stream));
     }
 }
 
@@ -232,7 +257,7 @@ class TAG_Float : TAG {
     mixin _TAG_Ctor!();
 
     static TAG_Float read(Stream stream, bool no_name = false) {
-        return new TAG_Float(no_name ? "" : .read!string(stream), .read!byte(stream));
+        return new TAG_Float(no_name ? "" : .read!string(stream), .read!float(stream));
     }
 }
 
@@ -242,7 +267,7 @@ class TAG_Double : TAG {
     mixin _TAG_Ctor!();
 
     static TAG_Double read(Stream stream, bool no_name = false) {
-        return new TAG_Double(no_name ? "" : .read!string(stream), .read!byte(stream));
+        return new TAG_Double(no_name ? "" : .read!string(stream), .read!double(stream));
     }
 }
 

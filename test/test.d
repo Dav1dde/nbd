@@ -5,7 +5,10 @@ private {
 }
 
 void main() {
-    auto nf = new NBTFile("hello_world.nbt");
+    foreach(file; ["hello_world.nbt", "bigtest.nbt"]) {
+        writefln("\nFile: %s", file);
+        auto nf = new NBTFile(file);
 
-    writefln("%s", nf.value);
+        writefln("%s\n", nf.value);
+    }
 }
