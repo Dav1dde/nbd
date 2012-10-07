@@ -7,8 +7,12 @@ private {
     import std.exception : enforceEx;
     import std.typetuple : TypeTuple;
     import std.typecons : NoDuplicates, staticIndexOf, staticMap;
-    import std.traits : isArray, isStaticArray;
+    import std.traits : isArray, isStaticArray, isSomeString;
+    import std.range : ElementEncodingType;
     import std.string : format;
+    import std.array : join, replace;
+    import std.algorithm : map;
+    import std.conv : to;
     import std.metastrings : toStringNow;
     import std.zlib : Compress, HeaderFormat, uncompress, ZlibException;
 
@@ -184,8 +188,23 @@ mixin template _Base_TAG(int id_, DType_) {
         return get!(id)();
     }
 
-    string toString() {
-        return "%s(%s, %s)".format(typeof(this).stringof, name, value);
+    override string toString() {
+        string val;
+        static if(isArray!DType && !isSomeString!DType) {
+            if(value.length > 15) {
+                val = "# %d %s\n    [%s, ...]".format(value.length, ElementEncodingType!(typeof(value)).stringof,
+                                                      value[0..15].map!(to!string).join(" "));
+            } else {
+                val = "# %d %s\n    [%s]".format(value.length, ElementEncodingType!(typeof(value)).stringof,
+                                                 value.map!(to!string).join(" "));
+            }
+        } else static if(isSomeString!DType) {
+            val = "'%s'".format(value);
+        } else {
+            val = to!string(value);
+        }
+
+        return "%s('%s'): %s".format(typeof(this).stringof, name, val);
     }
 }
 
@@ -395,6 +414,19 @@ class TAG_Compound : TAG {
         }
 
         .write(stream, cast(byte)0); // END_Tag
+    }
+
+    override string toString() {
+        enum templ = "TAG_Compound('%s'): # %d %s\n"
+                     "{\n"
+                     "    %s\n"
+                     "}";
+
+        string inner = value.byValue().map!(x => x.toString()).join("\n").replace("\n", "\n    ");
+
+        size_t len = value.keys().length;
+        
+        return templ.format(name, len, len == 1 ? "entry" : "entries", inner);
     }
 }
 

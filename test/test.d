@@ -11,7 +11,7 @@ void main() {
         writefln("\nFile: %s", file);
         auto nf = new NBTFile(file);
 
-        writefln("%s\n", nf.value);
+        writefln("%s\n", nf);
 
         nf.save(file ~ "_new");
     }
@@ -20,7 +20,7 @@ void main() {
         writefln("\nFile: %s", file);
         auto nf = new NBTFile(file);
 
-        writefln("%s\n", nf.value);
+        writefln("%s\n", nf);
     }
     
 }
