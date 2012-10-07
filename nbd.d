@@ -156,6 +156,12 @@ mixin template _Base_TAG(int id_, DType_) {
     }
 }
 
+mixin template _Base_TAG_read() {
+    static typeof(this) read(Stream stream, bool no_name = false) {
+        return new typeof(this)(no_name ? "" : .read!string(stream), .read!DType(stream));
+    }
+}
+
 private template extract_id(alias T) {
     alias T.id extract_id;
 }
@@ -219,66 +225,42 @@ debug pragma(msg, _tags);
 
 class TAG_Byte : TAG {
     mixin _Base_TAG!(1, byte);
-
-    static TAG_Byte read(Stream stream, bool no_name = false) {
-        return new TAG_Byte(no_name ? "" : .read!string(stream), .read!byte(stream));
-    }
+    mixin _Base_TAG_read!();
 }
 
 class TAG_Short : TAG {
     mixin _Base_TAG!(2, short);
-
-    static TAG_Short read(Stream stream, bool no_name = false) {
-        return new TAG_Short(no_name ? "" : .read!string(stream), .read!short(stream));
-    }
+    mixin _Base_TAG_read!();
 }
 
 class TAG_Int : TAG {
     mixin _Base_TAG!(3, int);
-
-    static TAG_Int read(Stream stream, bool no_name = false) {
-        return new TAG_Int(no_name ? "" : .read!string(stream), .read!int(stream));
-    }
+    mixin _Base_TAG_read!();
 }
 
 class TAG_Long : TAG {
     mixin _Base_TAG!(4, long);
-
-    static TAG_Long read(Stream stream, bool no_name = false) {
-        return new TAG_Long(no_name ? "" : .read!string(stream), .read!long(stream));
-    }
+    mixin _Base_TAG_read!();
 }
 
 class TAG_Float : TAG {
     mixin _Base_TAG!(5, float);
-
-    static TAG_Float read(Stream stream, bool no_name = false) {
-        return new TAG_Float(no_name ? "" : .read!string(stream), .read!float(stream));
-    }
+    mixin _Base_TAG_read!();
 }
 
 class TAG_Double : TAG {
     mixin _Base_TAG!(6, double);
-
-    static TAG_Double read(Stream stream, bool no_name = false) {
-        return new TAG_Double(no_name ? "" : .read!string(stream), .read!double(stream));
-    }
+    mixin _Base_TAG_read!();
 }
 
 class TAG_Byte_Array : TAG {
     mixin _Base_TAG!(7, byte[]);
-
-    static TAG_Byte_Array read(Stream stream, bool no_name = false) {
-        return new TAG_Byte_Array(no_name ? "" : .read!string(stream), .read!(byte[])(stream));
-    }
+    mixin _Base_TAG_read!();
 }
 
 class TAG_String : TAG {
     mixin _Base_TAG!(8, string);
-
-    static TAG_String read(Stream stream, bool no_name = false) {
-        return new TAG_String(no_name ? "" : .read!string(stream), .read!string(stream));
-    }
+    mixin _Base_TAG_read!();
 }
 
 class TAG_List : TAG {
@@ -341,15 +323,11 @@ class TAG_Compound : TAG {
 
 class TAG_Int_Array : TAG {
     mixin _Base_TAG!(11, int[]);
-
-    static TAG_Int_Array read(Stream stream, bool no_name = false) {
-        return new TAG_Int_Array(no_name ? "" : .read!string(stream), .read!(int[])(stream));
-    }
+    mixin _Base_TAG_read!();
 }
 
 
-
-T read(T)(Stream stream) {
+private T read(T)(Stream stream) {
     static if(__traits(hasMember, T, "read")) {
         return T.read(stream);
     } else  {
