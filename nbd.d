@@ -10,7 +10,7 @@ private {
     import std.traits : isArray, isStaticArray;
     import std.string : format;
     import std.metastrings : toStringNow;
-    import std.zlib : compress, uncompress, ZlibException;
+    import std.zlib : Compress, HeaderFormat, uncompress, ZlibException;
 
 //     import zstream;
 }
@@ -65,6 +65,41 @@ class NBTFile : TAG_Compound {
         read(stream);
     }
 
+    protected void read(Stream stream) {
+        enforceEx!NBTException(stream.readable, "can't read from stream");
+
+        enforceEx!NBTException(.read!(byte)(stream) == 0x0A, "file doesn't start with TAG_Compound");
+
+        TAG_Compound tc = super.read(stream);
+
+        _value.Compound = tc.value;
+        name = tc.name;
+    }
+
+    void save(string filename, Compression compression = Compression.DEFLATE, bool big_endian = true) {
+        enforceEx!NBTException(compression != Compression.AUTO, "compression can not be AUTO for save");
+
+        BufferedFile file = new BufferedFile(filename, FileMode.Out);
+
+        Endian endian = big_endian ? Endian.bigEndian : Endian.littleEndian;
+        EndianStream stream = new EndianStream(file, Endian.bigEndian);
+        
+        if(compression == Compression.NONE) {
+            write(stream);
+        } else {
+            // Yes I know that sucks
+            auto mem_stream = new MemoryStream();
+            write(mem_stream);
+
+            const(ubyte)[] compressed = compress(mem_stream.data, compression);
+
+            stream.writeExact(compressed.ptr, compressed.length);
+        }
+
+        stream.close();
+        file.close();
+    }
+
     protected Stream uncompress(ref ubyte[] compressed, Compression compression) {
         ubyte[] uncompressed;
 
@@ -90,31 +125,15 @@ class NBTFile : TAG_Compound {
         return new MemoryStream(cast(ubyte[])uncompressed);
     }
 
-    private void read(Stream stream) {
-        enforceEx!NBTException(stream.readable, "Can't read from stream");
+    protected const(ubyte)[] compress(ubyte[] uncompressed, Compression compression) {
+        // yay, I can't specify winbits for std.zlib.compress ...
+        auto c = new Compress(compression == Compression.GZIP ? HeaderFormat.gzip : HeaderFormat.deflate);
 
-        enforceEx!NBTException(.read!(byte)(stream) == 0x0A, "file doesn't start with TAG_Compound");
+        const(void)[] compressed = c.compress(cast(void[])uncompressed);
+        compressed ~= c.flush();
 
-        TAG_Compound tc = super.read(stream);
-
-        _value.Compound = tc.value;
-        name = tc.name;
+        return cast(const(ubyte)[])compressed;        
     }
-
-    void save(string filename, Compression compression = Compression.DEFLATE, bool big_endian = true) {
-        auto bf = new BufferedFile(filename, FileMode.Out);
-        save(bf, compression, big_endian);
-        bf.close();
-    }
-
-    void save(Stream stream, Compression compression = Compression.DEFLATE, bool big_endian = true) {
-        enforceEx!NBTException(stream.writeable, "Can't write into stream");
-
-        Endian endian = big_endian ? Endian.bigEndian : Endian.littleEndian;
-        stream = new EndianStream(stream, Endian.bigEndian);
-
-        write(stream);
-    }    
 }
 
 union Value {
