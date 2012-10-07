@@ -48,13 +48,20 @@ class NBTFile : TAG_Compound {
             ubyte[] tmp_buf = new ubyte[2048];
             while(!stream.eof()) {
                 size_t r = stream.read(tmp_buf);
-                buf ~= tmp_buf;
+                buf ~= tmp_buf[0..r];
             }
 
             ubyte[] uncompressed;
             try {
-                // +32 to winbits enables zlibs auto detection 
-                uncompressed = cast(ubyte[])uncompress(cast(void[])buf, buf.length, 15+32);
+                int winbits = 15;
+
+                if(compression == Compression.AUTO) {
+                    winbits += 32; // +32 to winbits enables zlibs auto detection
+                } else {
+                    winbits += compression = Compression.GZIP ? 16 : 0;
+                }
+                
+                uncompressed = cast(ubyte[])uncompress(cast(void[])buf, buf.length, 15);
             } catch(ZlibException) { // assume it's not compressed
                 uncompressed = buf;
             }
