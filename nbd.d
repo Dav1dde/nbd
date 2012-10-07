@@ -101,11 +101,19 @@ class NBTFile : TAG_Compound {
         name = tc.name;
     }
 
+    void save(string filename, Compression compression = Compression.DEFLATE, bool big_endian = true) {
+        auto bf = new BufferedFile(filename, FileMode.Out);
+        save(bf, compression, big_endian);
+        bf.close();
+    }
+
     void save(Stream stream, Compression compression = Compression.DEFLATE, bool big_endian = true) {
         enforceEx!NBTException(stream.writeable, "Can't write into stream");
 
         Endian endian = big_endian ? Endian.bigEndian : Endian.littleEndian;
         stream = new EndianStream(stream, Endian.bigEndian);
+
+        write(stream);
     }    
 }
 
@@ -132,7 +140,7 @@ union Value {
 //     string ret;
 // 
 //     foreach(T; _tags) {
-//         ret ~= (extract_type!T).stringof ~ " " ~ T.stringof[4..$] ~ ";\n";
+//         ret ~= T.DType.stringof ~ " " ~ T.stringof[4..$] ~ ";\n";
 //     }
 // 
 //     return ret;
@@ -145,6 +153,10 @@ mixin template _Base_TAG(int id_, DType_) {
     this(T)(string name, T value) {
         this.name = name;
         set(value);
+    }
+
+    override int get_id() {
+        return id;
     }
 
     @property auto value() {
@@ -163,6 +175,7 @@ mixin template _Base_TAG_rw() {
 
     override void write(Stream stream, bool no_name = false) {
         if(!no_name) {
+            .write(stream, cast(byte)id);
             .write(stream, name);
         }
 
@@ -181,6 +194,10 @@ private template extract_type(alias T) {
 
 abstract class TAG {
     enum id = 0;
+
+    int get_id() {
+        return id;
+    }
 
     protected Value _value;
     string name;
@@ -296,6 +313,24 @@ class TAG_List : TAG {
             default: throw new NBTException(`invalid/unimplemented tag value %d"`.format(tag));
         }
     }
+
+    override void write(Stream stream, bool no_name = false) {
+        if(!value.length) { // writing an empty list is useless and it's impossible to set the tag type
+            return;
+        }
+
+        if(!no_name) {
+            .write(stream, cast(byte)id);
+            .write(stream, name);
+        }
+
+        .write(stream, cast(byte)value[0].get_id());
+        .write(stream, cast(int)value.length);
+
+        foreach(tag; value) {
+            tag.write(stream, true);
+        }       
+    }
 }
 
 class TAG_Compound : TAG {
@@ -326,6 +361,19 @@ class TAG_Compound : TAG {
         }
 
         return new TAG_Compound(name, result);
+    }
+
+    override void write(Stream stream, bool no_name = false) {
+        if(!no_name) {
+            .write(stream, cast(byte)id);
+            .write(stream, name);
+        }
+
+        foreach(name, tag; value) {
+            tag.write(stream, false);
+        }
+
+        .write(stream, cast(byte)0); // END_Tag
     }
 }
 
@@ -386,8 +434,9 @@ private void write_impl(T)(Stream stream, T value) if(is(T == string)) {
 
 private void write_impl(T)(Stream stream, T value) if(!is(T == string)) {
     static if(isArray!T) {
-        ushort length = cast(ushort)value.length;
-
+        int length = cast(int)value.length;
+        stream.write(length);
+        
         foreach(i; 0..length) {
             stream.write(value[i]);
         }
