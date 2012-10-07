@@ -156,9 +156,17 @@ mixin template _Base_TAG(int id_, DType_) {
     }
 }
 
-mixin template _Base_TAG_read() {
+mixin template _Base_TAG_rw() {
     static typeof(this) read(Stream stream, bool no_name = false) {
         return new typeof(this)(no_name ? "" : .read!string(stream), .read!DType(stream));
+    }
+
+    override void write(Stream stream, bool no_name = false) {
+        if(!no_name) {
+            .write(stream, name);
+        }
+
+        .write(stream, value);
     }
 }
 
@@ -177,7 +185,7 @@ abstract class TAG {
     protected Value _value;
     string name;
    
-    void write(Stream) {
+    void write(Stream, bool no_name = false) {
         throw new NBTException("write not implemented");
     }
 
@@ -225,42 +233,42 @@ debug pragma(msg, _tags);
 
 class TAG_Byte : TAG {
     mixin _Base_TAG!(1, byte);
-    mixin _Base_TAG_read!();
+    mixin _Base_TAG_rw!();
 }
 
 class TAG_Short : TAG {
     mixin _Base_TAG!(2, short);
-    mixin _Base_TAG_read!();
+    mixin _Base_TAG_rw!();
 }
 
 class TAG_Int : TAG {
     mixin _Base_TAG!(3, int);
-    mixin _Base_TAG_read!();
+    mixin _Base_TAG_rw!();
 }
 
 class TAG_Long : TAG {
     mixin _Base_TAG!(4, long);
-    mixin _Base_TAG_read!();
+    mixin _Base_TAG_rw!();
 }
 
 class TAG_Float : TAG {
     mixin _Base_TAG!(5, float);
-    mixin _Base_TAG_read!();
+    mixin _Base_TAG_rw!();
 }
 
 class TAG_Double : TAG {
     mixin _Base_TAG!(6, double);
-    mixin _Base_TAG_read!();
+    mixin _Base_TAG_rw!();
 }
 
 class TAG_Byte_Array : TAG {
     mixin _Base_TAG!(7, byte[]);
-    mixin _Base_TAG_read!();
+    mixin _Base_TAG_rw!();
 }
 
 class TAG_String : TAG {
     mixin _Base_TAG!(8, string);
-    mixin _Base_TAG_read!();
+    mixin _Base_TAG_rw!();
 }
 
 class TAG_List : TAG {
@@ -323,7 +331,7 @@ class TAG_Compound : TAG {
 
 class TAG_Int_Array : TAG {
     mixin _Base_TAG!(11, int[]);
-    mixin _Base_TAG_read!();
+    mixin _Base_TAG_rw!();
 }
 
 
@@ -358,5 +366,32 @@ private T read_impl(T)(Stream stream) if(!is(T == string)) {
         T res;  
         stream.read(res);
         return res;
+    }
+}
+
+private void write(T)(Stream stream, T value) {
+    static if(__traits(hasMember, T, "write")) {
+        value.write(stream);
+    } else {
+        write_impl(stream, value);
+    }
+}
+
+
+private void write_impl(T)(Stream stream, T value) if(is(T == string)) {
+    ushort length = cast(ushort)((cast(void[])value).length);
+    stream.write(length);
+    stream.writeString(value);
+}
+
+private void write_impl(T)(Stream stream, T value) if(!is(T == string)) {
+    static if(isArray!T) {
+        ushort length = cast(ushort)value.length;
+
+        foreach(i; 0..length) {
+            stream.write(value[i]);
+        }
+    } else {
+        stream.write(value);
     }
 }
