@@ -82,21 +82,23 @@ class NBTFile : TAG_Compound {
         BufferedFile file = new BufferedFile(filename, FileMode.Out);
 
         Endian endian = big_endian ? Endian.bigEndian : Endian.littleEndian;
-        EndianStream stream = new EndianStream(file, Endian.bigEndian);
         
         if(compression == Compression.NONE) {
+            EndianStream stream = new EndianStream(file, Endian.bigEndian);
+            
             write(stream);
         } else {
             // Yes I know that sucks
             auto mem_stream = new MemoryStream();
-            write(mem_stream);
+            EndianStream stream = new EndianStream(mem_stream, Endian.bigEndian);
+
+            write(stream);
 
             const(ubyte)[] compressed = compress(mem_stream.data, compression);
 
             stream.writeExact(compressed.ptr, compressed.length);
         }
 
-        stream.close();
         file.close();
     }
 
