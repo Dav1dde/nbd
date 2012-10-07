@@ -123,7 +123,10 @@ union Value {
     int[] int_array;
 }
 
-mixin template _TAG_Ctor() {
+mixin template _Base_TAG(int id_, DType_) {
+    enum id = id_;
+    alias DType_ DType;
+    
     this(T)(string name, T value) {
         this.name = name;
         set(value);
@@ -234,9 +237,7 @@ debug pragma(msg, _tags);
 
 
 class TAG_Byte : TAG {
-    enum id = 1;
-
-    mixin _TAG_Ctor!();
+    mixin _Base_TAG!(1, byte);
 
     static TAG_Byte read(Stream stream, bool no_name = false) {
         return new TAG_Byte(no_name ? "" : .read!string(stream), .read!byte(stream));
@@ -244,9 +245,7 @@ class TAG_Byte : TAG {
 }
 
 class TAG_Short : TAG {
-    enum id = 2;
-
-    mixin _TAG_Ctor!();
+    mixin _Base_TAG!(2, short);
 
     static TAG_Short read(Stream stream, bool no_name = false) {
         return new TAG_Short(no_name ? "" : .read!string(stream), .read!short(stream));
@@ -254,9 +253,7 @@ class TAG_Short : TAG {
 }
 
 class TAG_Int : TAG {
-    enum id = 3;
-
-    mixin _TAG_Ctor!();
+    mixin _Base_TAG!(3, int);
 
     static TAG_Int read(Stream stream, bool no_name = false) {
         return new TAG_Int(no_name ? "" : .read!string(stream), .read!int(stream));
@@ -264,9 +261,7 @@ class TAG_Int : TAG {
 }
 
 class TAG_Long : TAG {
-    enum id = 4;
-
-    mixin _TAG_Ctor!();
+    mixin _Base_TAG!(4, long);
 
     static TAG_Long read(Stream stream, bool no_name = false) {
         return new TAG_Long(no_name ? "" : .read!string(stream), .read!long(stream));
@@ -274,9 +269,7 @@ class TAG_Long : TAG {
 }
 
 class TAG_Float : TAG {
-    enum id = 5;
-
-    mixin _TAG_Ctor!();
+    mixin _Base_TAG!(5, float);
 
     static TAG_Float read(Stream stream, bool no_name = false) {
         return new TAG_Float(no_name ? "" : .read!string(stream), .read!float(stream));
@@ -284,9 +277,7 @@ class TAG_Float : TAG {
 }
 
 class TAG_Double : TAG {
-    enum id = 6;
-
-    mixin _TAG_Ctor!();
+    mixin _Base_TAG!(6, double);
 
     static TAG_Double read(Stream stream, bool no_name = false) {
         return new TAG_Double(no_name ? "" : .read!string(stream), .read!double(stream));
@@ -294,9 +285,7 @@ class TAG_Double : TAG {
 }
 
 class TAG_Byte_Array : TAG {
-    enum id = 7;
-
-    mixin _TAG_Ctor!();
+    mixin _Base_TAG!(7, byte[]);
 
     static TAG_Byte_Array read(Stream stream, bool no_name = false) {
         return new TAG_Byte_Array(no_name ? "" : .read!string(stream), .read!(byte[])(stream));
@@ -304,9 +293,7 @@ class TAG_Byte_Array : TAG {
 }
 
 class TAG_String : TAG {
-    enum id = 8;
-
-    mixin _TAG_Ctor!();
+    mixin _Base_TAG!(8, string);
 
     static TAG_String read(Stream stream, bool no_name = false) {
         return new TAG_String(no_name ? "" : .read!string(stream), .read!string(stream));
@@ -314,9 +301,7 @@ class TAG_String : TAG {
 }
 
 class TAG_List : TAG {
-    enum id = 9;
-
-    mixin _TAG_Ctor!();
+    mixin _Base_TAG!(9, TAG[]);
 
     static TAG_List read(Stream stream, bool no_name = false) {
         string name = no_name ? "" : .read!string(stream);
@@ -343,9 +328,7 @@ class TAG_List : TAG {
 }
 
 class TAG_Compound : TAG {
-    enum id = 10;
-
-    mixin _TAG_Ctor!();
+    mixin _Base_TAG!(10, TAG[string]);
 
     static TAG_Compound read(Stream stream, bool no_name = false) {
         TAG[string] result;
@@ -376,9 +359,7 @@ class TAG_Compound : TAG {
 }
 
 class TAG_Int_Array : TAG {
-    enum id = 11;
-
-    mixin _TAG_Ctor!();
+    mixin _Base_TAG!(11, int[]);
 
     static TAG_Int_Array read(Stream stream, bool no_name = false) {
         return new TAG_Int_Array(no_name ? "" : .read!string(stream), .read!(int[])(stream));
