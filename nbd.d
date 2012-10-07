@@ -213,10 +213,6 @@ abstract class TAG {
     }
 }
 
-private template Enumeration(int i_, T) {
-    enum i = i_;
-    alias T Type;
-}
 
 private template get_tags() {
     alias NoDuplicates!(get_tags_impl!(__traits(allMembers, mixin(.stringof[7..$])))) get_tags;
@@ -226,7 +222,7 @@ private template get_tags_impl(T...) {
     static if(T.length == 0) {
         alias TypeTuple!() get_tags_impl;
     } else static if(T[0].length > 4 && T[0][0..4] == "TAG_" /+&& is(` ~ T[0] ~ ` : TAG)+/) {
-        alias TypeTuple!(Enumeration!(mixin(T[0]).id, mixin(T[0])), get_tags_impl!(T[1..$])) get_tags_impl;
+        alias TypeTuple!(mixin(T[0]), get_tags_impl!(T[1..$])) get_tags_impl;
     } else {
         alias get_tags_impl!(T[1..$]) get_tags_impl;
     }
@@ -312,10 +308,10 @@ class TAG_List : TAG {
 
         sw:
         switch(tag) {
-            foreach(e; _tags) {
-                case e.i: {
+            foreach(T; _tags) {
+                case T.id: {
                     foreach(i; 0..result.length) {
-                        result[i] = e.Type.read(stream, true);
+                        result[i] = T.read(stream, true);
                     }
                     
                     break sw;
@@ -343,10 +339,10 @@ class TAG_Compound : TAG {
             switch(tag) {
                 case 0: break parse; break;
 
-                foreach(e; _tags) {
-                    case e.i: e.Type tmp = e.Type.read(stream, false);
-                              result[tmp.name] = tmp;
-                              break sw;
+                foreach(T; _tags) {
+                    case T.id: T tmp = T.read(stream, false);
+                               result[tmp.name] = tmp;
+                               break sw;
                 }
 
                 default: throw new NBTException(`invalid/unimplemented tag value %d"`.format(tag));
