@@ -6,7 +6,7 @@ private {
     import std.file : exists;
     import std.exception : enforceEx;
     import std.typetuple : TypeTuple;
-    import std.typecons : NoDuplicates;
+    import std.typecons : NoDuplicates, staticIndexOf, staticMap;
     import std.traits : isArray, isStaticArray;
     import std.string : format;
     import std.metastrings : toStringNow;
@@ -97,7 +97,7 @@ class NBTFile : TAG_Compound {
 
         TAG_Compound tc = super.read(stream);
 
-        _value.compound = tc.value;
+        _value.Compound = tc.value;
         name = tc.name;
     }
 
@@ -110,18 +110,33 @@ class NBTFile : TAG_Compound {
 }
 
 union Value {
-    byte byte_;
-    short short_;
-    int int_;
-    long long_;
-    float float_;
-    double double_;
-    byte[] byte_array;
-    string string_;
-    TAG[] list;
-    TAG[string] compound;
-    int[] int_array;
+    byte Byte;
+    short Short;
+    int Int;
+    long Long;
+    float Float;
+    double Double;
+    byte[] Byte_Array;
+    string String;
+    TAG[] List;
+    TAG[string] Compound;
+    int[] Int_Array;
 }
+
+// Unfortunatly that doesn't work:
+// union Value {
+//     mixin(inject_value());
+// }
+// 
+// string inject_value() {
+//     string ret;
+// 
+//     foreach(T; _tags) {
+//         ret ~= (extract_type!T).stringof ~ " " ~ T.stringof[4..$] ~ ";\n";
+//     }
+// 
+//     return ret;
+// }
 
 mixin template _Base_TAG(int id_, DType_) {
     enum id = id_;
@@ -141,6 +156,14 @@ mixin template _Base_TAG(int id_, DType_) {
     }
 }
 
+private template extract_id(alias T) {
+    alias T.id extract_id;
+}
+
+private template extract_type(alias T) {
+    alias T.DType extract_type;
+}
+
 
 abstract class TAG {
     enum id = 0;
@@ -157,58 +180,20 @@ abstract class TAG {
     }
 
     auto get(int id)() {
-        static if(id == 1) {
-            return _value.byte_;
-        } else static if(id == 2) {
-            return _value.short_;
-        } else static if(id == 3) {
-            return _value.int_;
-        } else static if(id == 4) {
-            return _value.long_;
-        } else static if(id == 5) {
-            return _value.float_;
-        } else static if(id == 6) {
-            return _value.double_;
-        } else static if(id == 7) {
-            return _value.byte_array;
-        } else static if(id == 8) {
-            return _value.string_;
-        } else static if(id == 9) {
-            return _value.list;
-        } else static if(id == 10) {
-            return _value.compound;
-        } else static if(id == 11) {
-            return _value.int_array;
+        alias staticIndexOf!(id, staticMap!(extract_id, _tags)) id_index;
+        static if(id_index < 0) {
+            static assert(false, "get not implemented for id " ~ toStringNow!id);
         } else {
-            static assert(false, "get not implemented for id " ~ toStringNow!(i));
+            return mixin("_value." ~ _tags[id_index].stringof[4..$]);
         }
     }
 
     void set(T)(T value) {
-        static if(is(T == byte)) {
-            _value.byte_ = value;
-        } else static if(is(T == short)) {
-            _value.short_ = value;
-        } else static if(is(T == int)) {
-            _value.int_ = value;
-        } else static if(is(T == long)) {
-            _value.long_ = value;
-        } else static if(is(T == float)) {
-            _value.float_ = value;
-        } else static if(is(T == double)) {
-            _value.double_ = value;
-        } else static if(is(T == byte[])) {
-            _value.byte_array = value;
-        } else static if(is(T == string)) {
-            _value.string_ = value;
-        } else static if(is(T == TAG[])) {
-            _value.list = value;
-        } else static if(is(T == TAG[string])) {
-            _value.compound = value;
-        } else static if(is(T == int[])) {
-            _value.int_array = value;
-        } else {
+        alias staticIndexOf!(T, staticMap!(extract_type, _tags)) id_index;
+        static if(id_index < 0) {
             static assert(false, "set not implemented for " ~ T.stringof);
+        } else {
+            mixin("_value." ~ _tags[id_index].stringof[4..$] ~ " = value;");
         }
     }
 }
