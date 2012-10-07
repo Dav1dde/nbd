@@ -2,10 +2,12 @@ private {
     import nbd;
 
     import std.stdio;
+    import std.file;
+    import std.algorithm;
 }
 
 void main() {
-    foreach(file; ["hello_world.nbt", "bigtest.nbt"]) {
+    foreach(file; dirEntries(".", SpanMode.shallow).filter!(x => x.name.endsWith(".nbt"))) {
         writefln("\nFile: %s", file);
         auto nf = new NBTFile(file);
 

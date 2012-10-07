@@ -308,7 +308,7 @@ class TAG_List : TAG {
             foreach(e; _tags) {
                 case e.i: {
                     foreach(i; 0..result.length) {
-                        result[i] = e.Type.read(stream, false);
+                        result[i] = e.Type.read(stream, true);
                     }
                     
                     break sw;
