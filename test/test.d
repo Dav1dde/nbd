@@ -1,5 +1,5 @@
 private {
-    import nbd;
+    import nbt;
 
     import std.stdio;
     import std.file;
