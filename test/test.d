@@ -21,6 +21,5 @@ void main() {
         auto nf = new NBTFile(file);
 
         writefln("%s\n", nf);
-    }
-    
+    }    
 }

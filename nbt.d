@@ -184,7 +184,7 @@ mixin template _Base_TAG(int id_, DType_) {
         return id;
     }
 
-    @property auto value() {
+    @property auto ref value() {
         return get!(id)();
     }
 
@@ -206,6 +206,10 @@ mixin template _Base_TAG(int id_, DType_) {
 
         return "%s('%s'): %s".format(typeof(this).stringof, name, val);
     }
+
+    static if(isArray!DType && !isSomeString!DType) {
+        mixin _Base_TAG_array!();
+    }
 }
 
 mixin template _Base_TAG_rw() {
@@ -220,6 +224,24 @@ mixin template _Base_TAG_rw() {
         }
 
         .write(stream, value);
+    }
+}
+
+mixin template _Base_TAG_array() {
+    DType opSlice() {
+        return get!(id)();
+    }
+
+    DType opSlice(size_t x, size_t y) {
+        return mixin("_value." ~ typeof(this).stringof[4..$] ~ "[x..y]");
+    }
+
+    void opSliceAssign(DType v) {
+        mixin("_value." ~ typeof(this).stringof[4..$] ~ "[] = v;");
+    }
+
+    void opSliceAssign(DType v, size_t x, size_t y) {
+        mixin("_value." ~ typeof(this).stringof[4..$] ~ "[x..y] = v;");
     }
 }
 
@@ -266,6 +288,10 @@ abstract class TAG {
         } else {
             mixin("_value." ~ _tags[id_index].stringof[4..$] ~ " = value;");
         }
+    }
+
+    void opAssign(T)(T value) if(__traits(compiles, set(value))) {
+        set(value);
     }
 }
 
@@ -427,6 +453,14 @@ class TAG_Compound : TAG {
         size_t len = value.keys().length;
         
         return templ.format(name, len, len == 1 ? "entry" : "entries", inner);
+    }
+
+    TAG opIndex(string key) {
+        return value[key];
+    }
+
+    void opIndexAssign(TAG value_, string key) {
+        _value.Compound[key] = value;
     }
 }
 
