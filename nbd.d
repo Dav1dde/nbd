@@ -37,6 +37,11 @@ class NBTFile : TAG_Compound {
         this(new BufferedFile(file, FileMode.In), compression, big_endian);
     }
 
+    this()(ubyte[] data, Compression compression = Compression.AUTO, bool big_endian = true) {
+        Stream stream = uncompress(data, compression);
+        this(stream, Compression.NONE, big_endian); // we uncompressed above
+    }
+
     this()(Stream stream, Compression compression = Compression.AUTO, bool big_endian = true) {
 //         stream = new ZStream(stream, HeaderFormat.gzip);
 
@@ -51,33 +56,38 @@ class NBTFile : TAG_Compound {
                 buf ~= tmp_buf[0..r];
             }
 
-            ubyte[] uncompressed;
-            try {
-                int winbits = 15;
-
-                if(compression == Compression.AUTO) {
-                    winbits += 32; // +32 to winbits enables zlibs auto detection
-                } else {
-                    winbits += compression == Compression.GZIP ? 16 : 0;
-                }
-                
-                uncompressed = cast(ubyte[])uncompress(cast(void[])buf, buf.length, winbits);
-            } catch(ZlibException) { // assume it's not compressed
-                if(compression != Compression.AUTO) {
-                    throw new NBTException("this file is not %s compressed"
-                                .format(compression == Compression.GZIP ? "gzip" : "deflate"));
-                }
-            
-                uncompressed = buf;
-            }
-
-            stream = new MemoryStream(cast(ubyte[])uncompressed);
+            stream = uncompress(buf, compression);
         }
 
         Endian endian = big_endian ? Endian.bigEndian : Endian.littleEndian;
         stream = new EndianStream(stream, Endian.bigEndian);
 
         read(stream);
+    }
+
+    protected Stream uncompress(ref ubyte[] compressed, Compression compression) {
+        ubyte[] uncompressed;
+
+        try {
+            int winbits = 15;
+
+            if(compression == Compression.AUTO) {
+                winbits += 32; // +32 to winbits enables zlibs auto detection
+            } else {
+                winbits += compression == Compression.GZIP ? 16 : 0;
+            }
+
+            uncompressed = cast(ubyte[]).uncompress(cast(void[])compressed, 0, winbits);
+        } catch(ZlibException) { // assume it's not compressed
+            if(compression != Compression.AUTO) {
+                throw new NBTException("this file is not %s compressed"
+                            .format(compression == Compression.GZIP ? "gzip" : "deflate"));
+            }
+
+            uncompressed = compressed;
+        }
+
+        return new MemoryStream(cast(ubyte[])uncompressed);
     }
 
     private void read(Stream stream) {
