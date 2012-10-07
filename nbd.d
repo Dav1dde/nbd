@@ -58,11 +58,16 @@ class NBTFile : TAG_Compound {
                 if(compression == Compression.AUTO) {
                     winbits += 32; // +32 to winbits enables zlibs auto detection
                 } else {
-                    winbits += compression = Compression.GZIP ? 16 : 0;
+                    winbits += compression == Compression.GZIP ? 16 : 0;
                 }
                 
-                uncompressed = cast(ubyte[])uncompress(cast(void[])buf, buf.length, 15);
+                uncompressed = cast(ubyte[])uncompress(cast(void[])buf, buf.length, winbits);
             } catch(ZlibException) { // assume it's not compressed
+                if(compression != Compression.AUTO) {
+                    throw new NBTException("this file is not %s compressed"
+                                .format(compression == Compression.GZIP ? "gzip" : "deflate"));
+                }
+            
                 uncompressed = buf;
             }
 
