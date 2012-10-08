@@ -447,11 +447,15 @@ class TAG_Compound : TAG {
                      "    %s\n"
                      "}";
 
-        string inner = value.byValue().map!(x => x.toString()).join("\n").replace("\n", "\n    ");
-
         size_t len = value.keys().length;
+
+        if(len) {
+            string inner = value.byValue().map!(x => x.toString()).join("\n").replace("\n", "\n    ");
         
-        return templ.format(name, len, len == 1 ? "entry" : "entries", inner);
+            return templ.format(name, len, len == 1 ? "entry" : "entries", inner);
+        } else {
+            return "TAG_Compound('%s'): {}".format(name);
+        }
     }
 
     TAG opIndex(string key) {
