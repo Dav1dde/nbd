@@ -311,7 +311,6 @@ private template get_tags_impl(T...) {
 }
 
 alias get_tags!() _tags;
-debug pragma(msg, _tags);
 
 
 class TAG_Byte : TAG {
