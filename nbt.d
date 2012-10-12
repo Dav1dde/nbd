@@ -64,7 +64,7 @@ class NBTFile : TAG_Compound {
         }
 
         Endian endian = big_endian ? Endian.bigEndian : Endian.littleEndian;
-        stream = new EndianStream(stream, Endian.bigEndian);
+        stream = new EndianStream(stream, endian);
 
         read(stream);
     }
@@ -88,13 +88,13 @@ class NBTFile : TAG_Compound {
         Endian endian = big_endian ? Endian.bigEndian : Endian.littleEndian;
         
         if(compression == Compression.NONE) {
-            EndianStream stream = new EndianStream(file, Endian.bigEndian);
+            EndianStream stream = new EndianStream(file, endian);
             
             write(stream);
         } else {
             // Yes I know that sucks
             auto mem_stream = new MemoryStream();
-            EndianStream stream = new EndianStream(mem_stream, Endian.bigEndian);
+            EndianStream stream = new EndianStream(mem_stream, endian);
 
             write(stream);
 
