@@ -35,18 +35,17 @@ class NBTFile : TAG_Compound {
         AUTO
     }
 
-    this()() {}
 
-    this()(string file, Compression compression = Compression.AUTO, bool big_endian = true) {
+    this(string file, Compression compression = Compression.AUTO, bool big_endian = true) {
         this(new BufferedFile(file, FileMode.In), compression, big_endian);
     }
 
-    this()(ubyte[] data, Compression compression = Compression.AUTO, bool big_endian = true) {
+    this(ubyte[] data, Compression compression = Compression.AUTO, bool big_endian = true) {
         Stream stream = uncompress(data, compression);
         this(stream, Compression.NONE, big_endian); // we uncompressed above
     }
 
-    this()(Stream stream, Compression compression = Compression.AUTO, bool big_endian = true) {
+    this(Stream stream, Compression compression = Compression.AUTO, bool big_endian = true) {
 //         stream = new ZStream(stream, HeaderFormat.gzip);
 
         // TODO: check magic number?
@@ -66,18 +65,17 @@ class NBTFile : TAG_Compound {
         Endian endian = big_endian ? Endian.bigEndian : Endian.littleEndian;
         stream = new EndianStream(stream, endian);
 
-        read(stream);
+        auto tc = read(stream);
+
+        super(tc.name, tc.value);
     }
 
-    protected void read(Stream stream) {
+    protected TAG_Compound read(Stream stream) {
         enforceEx!NBTException(stream.readable, "can't read from stream");
 
         enforceEx!NBTException(.read!(byte)(stream) == 0x0A, "file doesn't start with TAG_Compound");
 
-        TAG_Compound tc = super.read(stream);
-
-        _value.Compound = tc.value;
-        name = tc.name;
+        return super.read(stream);
     }
 
     void save(string filename, Compression compression = Compression.DEFLATE, bool big_endian = true) {
@@ -175,7 +173,7 @@ mixin template _Base_TAG(int id_, DType_) {
     enum id = id_;
     alias DType_ DType;
     
-    this(T)(string name, T value) {
+    this(string name, DType value) {
         this.name = name;
         set(value);
     }
