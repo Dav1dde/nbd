@@ -35,7 +35,10 @@ class NBTFile : TAG_Compound {
         AUTO
     }
 
-
+    this() {
+        super("", null);
+    }
+    
     this(string file, Compression compression = Compression.AUTO, bool big_endian = true) {
         this(new BufferedFile(file, FileMode.In), compression, big_endian);
     }
@@ -396,7 +399,7 @@ class TAG_List : TAG {
     }
 }
 
-class TAG_Compound : TAG {
+class TAG_Compound : TAG {    
     mixin _Base_TAG!(10, TAG[string]);
 
     static TAG_Compound read(Stream stream, bool no_name = false) {
