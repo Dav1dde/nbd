@@ -5,8 +5,7 @@ private {
     import std.system : Endian;
     import std.file : exists;
     import std.exception : enforceEx;
-    import std.typetuple : TypeTuple;
-    import std.typecons : NoDuplicates, staticIndexOf, staticMap;
+    import std.typetuple : TypeTuple, NoDuplicates, staticIndexOf, staticMap;
     import std.traits : isArray, isStaticArray, isSomeString;
     import std.range : ElementEncodingType;
     import std.string : format;
